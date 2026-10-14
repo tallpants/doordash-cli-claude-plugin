@@ -1,0 +1,11 @@
+# Dependencies
+node_modules/
+
+# Build output (contains your DoorDash access token)
+doordash.zip
+
+# OS / editor
+.DS_Store
+
+# Logs
+npm-debug.log*
