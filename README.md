@@ -50,13 +50,6 @@ Then ask Claude something like "Find sushi near me" or "Reorder my last meal".
 
 When Claude reports an authentication error, your token has expired or been revoked. Run `npm run build` again and upload the new zip in place of the old plugin.
 
-## Upgrading dd-cli
-
-The build uses a fixed `dd-cli` version rather than the latest release, because it depends on details of how each release is packaged that DoorDash can change at any time. To move to a newer release:
-
-1. In `build-plugin.js`, set `DD_CLI_VERSION` to the new version, and `DD_CLI_SHA256` to the checksum DoorDash publishes for that release's `dd-cli-v<version>-linux-amd64.tar.gz` (the `.sha256` file next to it on the releases page).
-2. Run `npm run build`, upload the zip, and check that Claude can still search and read your account before relying on it.
-
 ## What's in the plugin
 
 ```
