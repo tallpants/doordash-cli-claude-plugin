@@ -25,6 +25,7 @@ Don't undo these without re-testing an upload:
 - **Everything the skill runs must be inside the skill folder.** claude.ai chat copies only `skills/<name>/` into its sandbox, so `dd-cli` lives in `skills/doordash/scripts/`.
 - **Placeholders aren't filled in on claude.ai chat.** Claude Code and Cowork replace `${CLAUDE_SKILL_DIR}` in SKILL.md; chat leaves it literal, and `${CLAUDE_PLUGIN_ROOT}` isn't available to commands either. SKILL.md gives a `find` fallback. In chat, the skill has shown up under `/root/.claude/plugins/synced/<id>/doordash/skills/doordash/`.
 - **No nested zips.** Upload fails with "Zip cannot contain nested zip files". The binary's `_internal/base_library.zip` is unpacked into `_internal/` instead (Python finds the same modules there), and the build fails if any other `.zip` appears.
+- **Network access must be allowed by the user.** `*.doordash.com` has to be in claude.ai's **Settings > Capabilities > Domain allowlist**, or `dd-cli` can't reach DoorDash from the sandbox. The README's install steps cover this.
 - **Limits:** 5,000 files and 200 MB per plugin. The current build is about 293 files and 16 MB zipped.
 - **Skill discovery depends on the description.** The skill is named `doordash` and its description lists what it can do and says it runs in the sandbox. Before that, Claude went looking for dd-cli on the user's computer or in their email instead.
 

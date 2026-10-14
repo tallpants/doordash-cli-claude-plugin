@@ -34,7 +34,11 @@ Every build signs you in again and gets a fresh token.
 
 ## Install the plugin on claude.ai
 
-In claude.ai, go to **Customize > Plugins > Add > Upload plugin** and choose `doordash.zip`.
+> [!IMPORTANT]
+> Claude's sandbox can't reach DoorDash until you allow it. Without this step, the plugin installs but `dd-cli` can't connect to DoorDash.
+
+1. In [claude.ai](https://claude.ai), go to **Settings > Capabilities > Domain allowlist** and add `*.doordash.com`.
+2. Go to **Customize > Plugins > Add > Upload plugin** and choose `doordash.zip`.
 
 Upload it to **your own account only**. Don't add it through organization settings (**Organization settings > Plugins & skills**), which would hand your token to everyone in your organization.
 
