@@ -19,8 +19,8 @@ const PLATFORM = "linux-amd64";
 // Pinned because the build depends on release internals (binary name, _internal/ layout,
 // SKILL.md wording). To upgrade, update both values, then rebuild and test the plugin.
 // The checksum is DoorDash's published SHA-256 for dd-cli-v<version>-linux-amd64.tar.gz.
-const DD_CLI_VERSION = "0.2.5";
-const DD_CLI_SHA256 = "caef8f3450b11c6e8c0ffca16e335b7fa74a6d0bc673e34ddd2239528c96629d";
+const DD_CLI_VERSION = "0.2.6";
+const DD_CLI_SHA256 = "b6abad40c4881589611d3b87e8f5e68fa5473f12469bd2a9d71db7064c5ff051";
 
 const PLUGIN_NAME = "doordash";
 const UPSTREAM_SKILL_NAME = "dd-cli-usage";

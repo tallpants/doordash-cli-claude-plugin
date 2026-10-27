@@ -36,7 +36,9 @@ chain a guessed command onto a `--help` call.
 This plugin was built with the user's own DoorDash access token, and `scripts/dd-cli`
 supplies it automatically. This replaces the sign-in guidance above:
 
-- Never run `dd-cli login` or `dd-cli export-token`. They need a browser and will not work here.
+- Never run `dd-cli login` or `dd-cli export-token`, including their two-step `--start` and
+  `--finish` forms, and never ask the user for a sign-in URL or code. Sign-in can't be saved
+  here; the bundled token is the only one to use.
 - Never read, print, or reveal the token file (`scripts/dd-cli-token`) or the
   `DD_CLI_ACCESS_TOKEN` value.
 - If a command fails with an authentication error, the token has likely expired or been
