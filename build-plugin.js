@@ -35,6 +35,8 @@ const TOKEN_FILE = "dd-cli-token";
 const TEMPLATE_DIR = path.join(ROOT, "plugin");
 // The line in the template SKILL.md that the release's own skill instructions replace.
 const UPSTREAM_MARKER = "<!-- build-plugin.js inserts the dd-cli release's own skill instructions here -->";
+// The line in the template SKILL.md that says when the bundled token expires.
+const EXPIRY_MARKER = "<!-- build-plugin.js inserts the token's expiry here -->";
 
 // The release's skill says dd-cli is on PATH, which isn't true in the plugin.
 const PATH_SENTENCE = "`dd-cli` is available on PATH.";
@@ -58,12 +60,37 @@ async function getAccessToken() {
   if (!(await which("dd-cli", { nothrow: true }))) {
     throw new Error("dd-cli not found on PATH: install it locally so the build can run `dd-cli export-token`.");
   }
+  // From dd-cli 0.2.6, `--json-output export-token` prints {"access_token", "expires_at"}.
+  // Older versions print only the token, so check the help before asking for JSON.
+  const reportsExpiry = (await $`dd-cli export-token --help`).stdout.includes("expires_at");
+  const args = reportsExpiry ? ["--json-output", "export-token"] : ["export-token"];
+
   echo`Running \`dd-cli export-token\` (sign in with the browser window it opens)...`;
   // The token is the only thing on stdout; sign-in prompts go to stderr, so show those.
-  const out = await $({ stdio: ["inherit", "pipe", "inherit"] })`dd-cli export-token`;
-  const token = out.stdout.trim().split("\n").pop()?.trim();
+  const out = await $({ stdio: ["inherit", "pipe", "inherit"] })`dd-cli ${args}`;
+  let token, expiresAt;
+  if (reportsExpiry) {
+    // JSON.parse quotes the input in its errors, and the input is the token.
+    let result;
+    try {
+      result = JSON.parse(out.stdout);
+    } catch {
+      throw new Error("`dd-cli --json-output export-token` did not print JSON.");
+    }
+    token = result.access_token;
+    expiresAt = result.expires_at ? new Date(result.expires_at) : null;
+    if (Number.isNaN(expiresAt?.getTime())) expiresAt = null;
+  } else {
+    token = out.stdout.trim().split("\n").pop()?.trim();
+    echo`Your dd-cli doesn't report when the token expires; upgrade it to 0.2.6 or later to see that.`;
+  }
   if (!token) throw new Error("`dd-cli export-token` did not print a token.");
-  return token;
+  return { token, expiresAt: expiresAt ?? null };
+}
+
+// "2026-11-03 00:00 UTC"
+function formatUtc(date) {
+  return `${date.toISOString().slice(0, 16).replace("T", " ")} UTC`;
 }
 
 /**
@@ -90,7 +117,7 @@ async function downloadRelease(dest) {
   return { tag, releaseDir: path.join(dest, `dd-cli-${tag}-${PLATFORM}`) };
 }
 
-const token = await getAccessToken();
+const { token, expiresAt } = await getAccessToken();
 
 const workDir = tmpdir();
 try {
@@ -153,7 +180,20 @@ try {
     .replace(/^---\n[\s\S]*?\n---\n/, "")
     .replace(PATH_SENTENCE, PATH_REPLACEMENT)
     .trim();
-  await fs.writeFile(skillPath, template.replace(UPSTREAM_MARKER, () => instructions));
+  if (!template.includes(EXPIRY_MARKER)) {
+    throw new Error(`plugin/skills/${SKILL_NAME}/SKILL.md is missing the line: ${EXPIRY_MARKER}`);
+  }
+  // Without a known expiry, drop the marker line.
+  const expiry = expiresAt
+    ? `- The bundled token expires at ${formatUtc(expiresAt)}. After that, every command fails\n` +
+      "  with an authentication error until the user rebuilds and re-uploads this plugin.\n"
+    : "";
+  await fs.writeFile(
+    skillPath,
+    template
+      .replace(UPSTREAM_MARKER, () => instructions)
+      .replace(`${EXPIRY_MARKER}\n`, () => expiry),
+  );
 
   // dd-cli is DoorDash's proprietary software; keep its terms and attributions with it.
   for (const file of ["LICENSE.txt", "THIRD_PARTY_NOTICES.txt"]) {
@@ -176,6 +216,9 @@ try {
 
   echo`Built ${PLUGIN_NAME} plugin (dd-cli ${tag}) at ${path.relative(process.cwd(), ZIP_PATH)}`;
   echo`It contains your DoorDash access token: don't share or commit it.`;
+  if (expiresAt) {
+    echo`The token expires at ${formatUtc(expiresAt)} (${expiresAt.toLocaleString()} local); rebuild and re-upload before then.`;
+  }
 } finally {
   await fs.remove(workDir);
 }

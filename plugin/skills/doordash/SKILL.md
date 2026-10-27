@@ -41,6 +41,7 @@ supplies it automatically. This replaces the sign-in guidance above:
   here; the bundled token is the only one to use.
 - Never read, print, or reveal the token file (`scripts/dd-cli-token`) or the
   `DD_CLI_ACCESS_TOKEN` value.
+<!-- build-plugin.js inserts the token's expiry here -->
 - If a command fails with an authentication error, the token has likely expired or been
   revoked. Tell the user to rebuild this plugin (`npm run build` in the plugin's repo) and
   upload it again.

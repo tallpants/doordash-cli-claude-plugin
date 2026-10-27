@@ -14,7 +14,7 @@ Notes for anyone (human or agent) changing this repo. User-facing docs are in [R
 ## Layout
 
 - `build-plugin.js`: the whole build. ESM, uses `zx` for shell steps, `tar` to unpack the release, `adm-zip` to unpack `base_library.zip`, `archiver` to write the zip.
-- `plugin/`: copied into the plugin as-is. `plugin/skills/doordash/SKILL.md` is the skill text; the build replaces its marker line with the release's own skill instructions.
+- `plugin/`: copied into the plugin as-is. `plugin/skills/doordash/SKILL.md` is the skill text; the build replaces its marker lines with the release's own skill instructions and the token's expiry.
 - `doordash.zip`: build output. Contains the user's token. Git-ignored; never commit it.
 
 ## Constraints learned from testing on claude.ai
@@ -34,14 +34,14 @@ Don't undo these without re-testing an upload:
 - It's a PyInstaller "onedir" build: the executable loads `_internal/` from its own directory, so the two must stay side by side. Renaming the executable is fine.
 - `scripts/dd-cli` is a small `sh` wrapper that reads `scripts/dd-cli-token` into `DD_CLI_ACCESS_TOKEN` and runs `scripts/libexec/dd-cli`. Keep the token out of SKILL.md so it never enters Claude's context.
 - The executable bits must survive zipping (`archiver` keeps them); SKILL.md tells Claude to `chmod +x` if they don't.
-- Tokens from `export-token` expire after a few days, so users rebuild and re-upload.
+- Tokens from `export-token` expire after about 72 hours, so users rebuild and re-upload. From dd-cli 0.2.6, `--json-output export-token` prints `{"access_token", "expires_at"}`; the build uses that when the local `export-token --help` mentions `expires_at`, and otherwise falls back to the plain token and leaves the expiry out of SKILL.md.
 
 ## Upgrading dd-cli
 
 The version is pinned (`DD_CLI_VERSION`, `DD_CLI_SHA256` in `build-plugin.js`) because the build depends on release internals: the binary's file name, the `_internal/` layout, and the exact sentence in the release's SKILL.md that says `dd-cli` is on PATH (`PATH_SENTENCE`). To upgrade:
 
 1. Update both constants (the checksum is the `.sha256` file published next to the release's `linux-amd64` asset).
-2. Build and check that it doesn't fail on `PATH_SENTENCE`, the marker line, or nested zips.
+2. Build and check that it doesn't fail on `PATH_SENTENCE`, the marker lines, or nested zips.
 3. Upload to claude.ai and confirm Claude can find the skill, run `--help`, and read the account (for example order history) before relying on it.
 
 ## Testing without a real sign-in
@@ -54,10 +54,13 @@ printf '#!/bin/sh\necho "STUB-TOKEN"\n' > /tmp/stub-bin/dd-cli && chmod +x /tmp/
 PATH="/tmp/stub-bin:$PATH" npm run build
 ```
 
+That stub tests the fallback for dd-cli versions that don't report expiry. To test the expiry path, have the stub print `expires_at` for `--help` and `{"access_token": "STUB-TOKEN", "expires_at": "2026-10-30T21:05:00+00:00"}` for `--json-output export-token`.
+
 This overwrites `doordash.zip`, so move a real build aside first. Then:
 
 - `claude plugin validate` doesn't accept zips; unzip and validate the folder: `unzip -q doordash.zip -d /tmp/out && claude plugin validate /tmp/out/doordash --strict`.
 - `zipinfo doordash.zip` shows permissions; both `dd-cli` files should be `-rwxr-xr-x` and the token `-rw-------`.
+- To check a real build's token without printing it, feed it to a local dd-cli 0.2.6+: `DD_CLI_ACCESS_TOKEN="$(unzip -p doordash.zip doordash/skills/doordash/scripts/dd-cli-token)" dd-cli --json-output auth status` shows its expiry, and a read-only command such as `order history` shows it reaches DoorDash.
 - The Linux binary won't run on macOS. To test changes to how the binary is laid out, try them on DoorDash's `darwin-arm64` release, which is the same PyInstaller layout.
 - The real end-to-end test is uploading to claude.ai and asking something like "What was my last order from Wendy's on DoorDash?" without naming the skill.
 

@@ -48,6 +48,8 @@ Then ask Claude something like "Find sushi near me" or "Reorder my last meal".
 
 ## When the token expires
 
+Tokens last about 72 hours. With `dd-cli` 0.2.6 or later installed locally, the build prints when yours expires and tells Claude in the skill, so Claude can explain an authentication error after that time.
+
 When Claude reports an authentication error, your token has expired or been revoked. Run `npm run build` again and upload the new zip in place of the old plugin.
 
 ## What's in the plugin
@@ -64,7 +66,7 @@ doordash/                           (inside doordash.zip)
 └── THIRD_PARTY_NOTICES.txt
 ```
 
-- **The token stays out of Claude's context.** It's kept in its own file and loaded by the wrapper, never written into the skill text. The skill also tells Claude not to run `dd-cli login`, which needs a browser, and never to reveal the token.
+- **The token stays out of Claude's context.** It's kept in its own file and loaded by the wrapper, never written into the skill text. The skill also tells Claude never to sign in to DoorDash itself or ask you for sign-in codes, and never to reveal the token.
 
 ## Licensing
 
